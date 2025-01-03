@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Asteriods</title>
+    <style></style>
+</head>
+
+<body>
+    <canvas id="gameCanvas" width="1000" height="800"></canvas>
+<script>
+    const FPS = 30; // Frames per second
+    const FRICTION = 0.7; // Friction coefficient of space (0 = no friction, 1 = lots of friction)
+    const SHIP_SIZE = 30; // Ship height in pixel
+    const TURN_SPEED = 360; // Turn speed Degree Per Second
+    const SHIP_THRUST = 5; // Acceleration of the ship in pixel per second
+
+    /** @type {HTMLCanvasElement} */
+    var canvas = document.getElementById("gameCanvas");
+    var context = canvas.getContext("2d");
+
+    var ship = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        radius: SHIP_SIZE / 2, 
+        angle: 90 / 180 * Math.PI, // convert to radians
+        rotation: 0,
+        thrusting: false,
+        thrust: {
+            x: 0,
+            y: 0
+        }
+    }
+
+    // Event Hanlders
+    document.addEventListener("keydown", keyDown);
+    document.addEventListener("keyup", keyUp);
+
+    // Set up the game loop
+    setInterval(update, 1000 / FPS);
+
+    function keyDown(/** @type {KeyBoardEvent}*/ event) {
+        switch(event.keyCode){
+            case 37: // left arrow (rotate ship left)
+                ship.rotation = TURN_SPEED / 180 * Math.PI / FPS;
+                break;
+            case 38: // up arrow (move forward)
+                ship.thrusting = true;
+                break;
+            case 39: // right arrow (rotate ship right)
+                ship.rotation = -TURN_SPEED / 180 * Math.PI / FPS;
+                break;
+        }
+    }
+
+    function keyUp(/** @type {KeyBoardEvent}*/ event) {
+        switch(event.keyCode){
+            case 37: // left arrow (stop rotating ship left)
+                ship.rotation = 0;
+                break;
+            case 38: // up arrow (stop moving forward)
+                ship.thrusting = false;
+                break;
+            case 39: // right arrow (stop rotating ship right)
+                ship.rotation = 0;
+                break;
+        }
+    }
+
+    function update() {
+        // Draw background (space)
+        context.fillStyle = "black";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Move the Ship forward
+        if(ship.thrusting) {
+            ship.thrust.x += SHIP_THRUST * Math.cos(ship.angle) / FPS;
+            ship.thrust.y -= SHIP_THRUST * Math.sin(ship.angle) / FPS;
+
+            // Draw thruster
+            context.fillStyle = "red";
+            context.strokeStyle = "yellow";
+            context.lineWidth = SHIP_SIZE / 10;
+            context.beginPath();
+            context.moveTo( // rear left of ship
+            ship.x - ship.radius * (2 / 3 * Math.cos(ship.angle) + 0.5 * Math.sin(ship.angle)),
+            ship.y + ship.radius * (2 / 3 * Math.sin(ship.angle) - 0.5 * Math.cos(ship.angle))
+            );
+            context.lineTo( // rear center behind the ship
+                ship.x - ship.radius * 6 / 3 * Math.cos(ship.angle),
+                ship.y + ship.radius * 6 / 3 * Math.sin(ship.angle)
+            );
+            context.lineTo( // rear right of ship
+                ship.x - ship.radius * (2 / 3 * Math.cos(ship.angle) - 0.5 * Math.sin(ship.angle)),
+                ship.y + ship.radius * (2 / 3 * Math.sin(ship.angle) + 0.5 * Math.cos(ship.angle))
+            );
+            context.closePath();
+            context.fill();
+            context.stroke();
+        }
+        else{
+            ship.thrust.x -= FRICTION * ship.thrust.x / FPS;
+            ship.thrust.y -= FRICTION * ship.thrust.y / FPS;
+        }
+
+        // Draw triangluar ship
+        context.strokeStyle = "white";
+        context.lineWidth = SHIP_SIZE / 20;
+        context.beginPath();
+        context.moveTo( // Front of ship
+            ship.x + 4 / 3 * ship.radius * Math.cos(ship.angle),
+            ship.y - 4 / 3 * ship.radius * Math.sin(ship.angle)
+        );
+        context.lineTo( // rear left of ship
+            ship.x - ship.radius * (2 / 3 * Math.cos(ship.angle) + Math.sin(ship.angle)),
+            ship.y + ship.radius * (2 / 3 * Math.sin(ship.angle) - Math.cos(ship.angle))
+        );
+        context.lineTo( // rear right of ship
+            ship.x - ship.radius * (2 / 3 * Math.cos(ship.angle) - Math.sin(ship.angle)),
+            ship.y + ship.radius * (2 / 3 * Math.sin(ship.angle) + Math.cos(ship.angle))
+        );
+        context.closePath();
+        context.stroke();
+
+        // Rotate the Ship
+        ship.angle += ship.rotation;
+
+        // Move the Ship
+        ship.x += ship.thrust.x;
+        ship.y += ship.thrust.y;
+
+        // handle edge of screen
+        if (ship.x < 0 - ship.radius) {
+            ship.x = canvas.width + ship.radius
+        }
+        else if (ship.x > canvas.width + ship.radius) {
+            ship.x = 0 - ship.radius;
+        }
+
+        if (ship.y < 0 - ship.radius) {
+            ship.y = canvas.height + ship.radius
+        }
+        else if (ship.y > canvas.height + ship.radius) {
+            ship.y = 0 - ship.radius;
+        }
+
+        // Center of triangle (dot)
+        context.fillStyle = "red";
+        //context.fillRect(ship.x - 1, ship.y - 1, 2, 2);
+    }
+</script>
+</body>
+
+</html>
