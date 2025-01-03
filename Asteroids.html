@@ -19,6 +19,7 @@
     const ASTEROIDS_SIZE = 100; // Starting size of asteroids in pixels
     const ASTEROIDS_SPEED = 50; // Max starting speed of asteroids in pixels
     const ASTEROIDS_VERTICES = 10; // Average number of vertices on each asteroid
+    const ASTEROIDS_JAG = 0.4; // Jaggedness of the asteroids (0 = none, 1 = a lot)
 
         /** @type {HTMLCanvasElement} */
     var canvas = document.getElementById("gameCanvas");
@@ -54,10 +55,16 @@
         asteroids = [];
         var x, y;
         for (var i = 0; i < ASTEROIDS_NUM; i++) {
-            x = Math.floor(Math.random() * canvas.width);
-            y = Math.floor(Math.random() * canvas.height);
+            do {
+                x = Math.floor(Math.random() * canvas.width);
+                y = Math.floor(Math.random() * canvas.height);
+            } while (distanceBetweenPoints(ship.x, ship.y, x, y) < ASTEROIDS_SIZE * 2 + ship.radius);
             asteroids.push(newAsteroid(x, y));
             }
+    }
+
+    function distanceBetweenPoints(x1, y1, x2, y2) {
+        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
     }
 
     function keyDown(/** @type {KeyboardEvent}*/ event) {
@@ -96,8 +103,14 @@
             yVelocity: Math.random() * ASTEROIDS_SPEED / FPS * (Math.random() < 0.5 ? 1 : -1),
             radius: ASTEROIDS_SIZE / 2,
             angle: Math.random() * Math.PI * 2, // Radians
-            vertices: Math.floor(Math.random() * (ASTEROIDS_VERTICES + 1) + ASTEROIDS_VERTICES / 2)
+            vertices: Math.floor(Math.random() * (ASTEROIDS_VERTICES + 1) + ASTEROIDS_VERTICES / 2),
+            offset: []
         };
+
+        // Create the vertex offset array
+        for (var i = 0; i < asteroid.vertices; i++) {
+            asteroid.offset.push(Math.random() * ASTEROIDS_JAG * 2 + 1 - ASTEROIDS_JAG);
+        }
 
         return asteroid;
     }
@@ -160,7 +173,7 @@
         // Draw the Asteroids
         context.strokeStyle = "slategrey";
         context.lineWidth = SHIP_SIZE / 20;
-        var x, y, radius, angle, vertices;
+        var x, y, radius, angle, vertices, offset;
         for (var i = 0; i < asteroids.length; i++) {
             // Get the asteroid properties
             x = asteroids[i].x;
@@ -168,27 +181,40 @@
             radius = asteroids[i].radius;
             angle = asteroids[i].angle;
             vertices = asteroids[i].vertices;
+            offset = asteroids[i].offset;
                 
             // Draw a path
             context.beginPath();
             context.moveTo(
-                x + radius * Math.cos(angle),
-                y + radius * Math.sin(angle)
-                );
+                x + radius * offset[0] * Math.cos(angle),
+                y + radius * offset[0] * Math.sin(angle)
+            );
 
             // Draw a polygon
-            for (var j = 0; j < vertices; j++) {
+            for (var j = 1; j < vertices; j++) {
                 context.lineTo(
-                    x + radius * Math.cos(angle + j * Math.PI * 2 / vertices),
-                    y + radius * Math.sin(angle + j * Math.PI * 2 / vertices)
+                    x + radius * offset[j] * Math.cos(angle + j * Math.PI * 2 / vertices),
+                    y + radius * offset[j] * Math.sin(angle + j * Math.PI * 2 / vertices)
                 )
             }
             context.closePath();
             context.stroke();
 
             // Move the asteroid
+            asteroids[i].x += asteroids[i].xVelocity;
+            asteroids[i].y += asteroids[i].yVelocity;
 
             // Handle edge of screen
+            if (asteroids[i].x < 0 - asteroids[i].radius) {
+                asteroids[i].x = canvas.width + asteroids[i].radius;
+                } else if (asteroids[i].x > canvas.width + asteroids[i].radius) {
+                    asteroids[i].x = 0 - asteroids[i].radius
+                }
+                if (asteroids[i].y < 0 - asteroids[i].radius) {
+                    asteroids[i].y = canvas.height + asteroids[i].radius;
+                } else if (asteroids[i].y > canvas.height + asteroids[i].radius) {
+                    asteroids[i].y = 0 - asteroids[i].radius
+                }
         }
 
         // Rotate the Ship
