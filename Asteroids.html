@@ -9,7 +9,7 @@
 
 <body>
     <canvas id="gameCanvas" width="1000" height="800"></canvas>
-<script>
+    <script>
     const FPS = 30; // Frames per second
     const FRICTION = 0.7; // Friction coefficient of space (0 = no friction, 1 = lots of friction)
     const SHIP_SIZE = 30; // Ship height in pixel
@@ -20,7 +20,7 @@
     const ASTEROIDS_SPEED = 50; // Max starting speed of asteroids in pixels
     const ASTEROIDS_VERTICES = 10; // Average number of vertices on each asteroid
 
-    /** @type {HTMLCanvasElement} */
+        /** @type {HTMLCanvasElement} */
     var canvas = document.getElementById("gameCanvas");
     var context = canvas.getContext("2d");
 
@@ -56,11 +56,11 @@
         for (var i = 0; i < ASTEROIDS_NUM; i++) {
             x = Math.floor(Math.random() * canvas.width);
             y = Math.floor(Math.random() * canvas.height);
-            asteroids.push(newAsteroid(x , y));
-        }
+            asteroids.push(newAsteroid(x, y));
+            }
     }
 
-    function keyDown(/** @type {KeyBoardEvent}*/ event) {
+    function keyDown(/** @type {KeyboardEvent}*/ event) {
         switch(event.keyCode){
             case 37: // left arrow (rotate ship left)
                 ship.rotation = TURN_SPEED / 180 * Math.PI / FPS;
@@ -74,7 +74,7 @@
         }
     }
 
-    function keyUp(/** @type {KeyBoardEvent}*/ event) {
+    function keyUp(/** @type {KeyboardEvent}*/ event) {
         switch(event.keyCode){
             case 37: // left arrow (stop rotating ship left)
                 ship.rotation = 0;
@@ -97,7 +97,9 @@
             radius: ASTEROIDS_SIZE / 2,
             angle: Math.random() * Math.PI * 2, // Radians
             vertices: Math.floor(Math.random() * (ASTEROIDS_VERTICES + 1) + ASTEROIDS_VERTICES / 2)
-        }
+        };
+
+        return asteroid;
     }
 
     function update() {
@@ -118,15 +120,15 @@
             context.moveTo( // rear left of ship
             ship.x - ship.radius * (2 / 3 * Math.cos(ship.angle) + 0.5 * Math.sin(ship.angle)),
             ship.y + ship.radius * (2 / 3 * Math.sin(ship.angle) - 0.5 * Math.cos(ship.angle))
-            );
+                );
             context.lineTo( // rear center behind the ship
-                ship.x - ship.radius * 6 / 3 * Math.cos(ship.angle),
-                ship.y + ship.radius * 6 / 3 * Math.sin(ship.angle)
-            );
+                ship.x - ship.radius * 5 / 3 * Math.cos(ship.angle),
+                ship.y + ship.radius * 5 / 3 * Math.sin(ship.angle)
+                );
             context.lineTo( // rear right of ship
                 ship.x - ship.radius * (2 / 3 * Math.cos(ship.angle) - 0.5 * Math.sin(ship.angle)),
                 ship.y + ship.radius * (2 / 3 * Math.sin(ship.angle) + 0.5 * Math.cos(ship.angle))
-            );
+                );
             context.closePath();
             context.fill();
             context.stroke();
@@ -143,15 +145,15 @@
         context.moveTo( // Front of ship
             ship.x + 4 / 3 * ship.radius * Math.cos(ship.angle),
             ship.y - 4 / 3 * ship.radius * Math.sin(ship.angle)
-        );
+            );
         context.lineTo( // rear left of ship
             ship.x - ship.radius * (2 / 3 * Math.cos(ship.angle) + Math.sin(ship.angle)),
             ship.y + ship.radius * (2 / 3 * Math.sin(ship.angle) - Math.cos(ship.angle))
-        );
+            );
         context.lineTo( // rear right of ship
             ship.x - ship.radius * (2 / 3 * Math.cos(ship.angle) - Math.sin(ship.angle)),
             ship.y + ship.radius * (2 / 3 * Math.sin(ship.angle) + Math.cos(ship.angle))
-        );
+            );
         context.closePath();
         context.stroke();
 
@@ -166,13 +168,13 @@
             radius = asteroids[i].radius;
             angle = asteroids[i].angle;
             vertices = asteroids[i].vertices;
-
+                
             // Draw a path
             context.beginPath();
             context.moveTo(
                 x + radius * Math.cos(angle),
                 y + radius * Math.sin(angle)
-            );
+                );
 
             // Draw a polygon
             for (var j = 0; j < vertices; j++) {
@@ -193,29 +195,29 @@
         ship.angle += ship.rotation;
 
         // Move the Ship
-        ship.x += ship.thrust.x;
-        ship.y += ship.thrust.y;
+            ship.x += ship.thrust.x;
+            ship.y += ship.thrust.y;
 
-        // handle edge of screen
+            // handle edge of screen
         if (ship.x < 0 - ship.radius) {
             ship.x = canvas.width + ship.radius
         }
         else if (ship.x > canvas.width + ship.radius) {
             ship.x = 0 - ship.radius;
-        }
+            }
 
         if (ship.y < 0 - ship.radius) {
             ship.y = canvas.height + ship.radius
         }
         else if (ship.y > canvas.height + ship.radius) {
             ship.y = 0 - ship.radius;
-        }
+            }
 
         // Center of triangle (dot)
         context.fillStyle = "red";
         //context.fillRect(ship.x - 1, ship.y - 1, 2, 2);
     }
-</script>
+    </script>
 </body>
 
 </html>
