@@ -17,7 +17,8 @@
     const GAME_LIVES = 3; // Starting number of lives
     const SHOW_BOUNDING = false; // Show or hide collision bounding
     const TEXT_FADE_TIME = 2.5; // Text fade time in seconds
-    const TEXT_SIZE = 40; // Text font height in pixels
+    const TEXT_SIZE = 50; // Text font height in pixels
+    const SAVE_KEY_SCORE = "highscore"; // Save key for local storage of score
 
     // Ship Constants
     const FRICTION = 0.7; // Friction coefficient of space (0 = no friction, 1 = lots of friction)
@@ -40,14 +41,18 @@
     const ASTEROIDS_SPEED = 50; // Max starting speed of asteroids in pixels
     const ASTEROIDS_VERTICES = 10; // Average number of vertices on each asteroid
     const ASTEROIDS_JAG = 0.4; // Jaggedness of the asteroids (0 = none, 1 = a lot)
+    const ASTEROID_POINTS_LARGE = 20; // Points scored for a large asteroid
+    const ASTEROID_POINTS_MEDIUM = 50; // Points scored for a large asteroid
+    const ASTEROID_POINTS_SMALL = 100; // Points scored for a large asteroid
 
 
+    /************* GAME SETUP *************/
     /** @type {HTMLCanvasElement} */
     var canvas = document.getElementById("gameCanvas");
     var context = canvas.getContext("2d");
 
     // Set up the game parameters
-    var level, asteriods, ship, text, textAlpha, lives;
+    var level, asteriods, ship, score, highscore, text, textAlpha, lives;
     newGame();
 
     // Event Hanlders for user inputs
@@ -57,7 +62,7 @@
     // Set up the game loop
     setInterval(update, 1000 / FPS);
 
-    
+
     /************* FUNCTIONS *************/
     function keyDown(/** @type {KeyboardEvent}*/ event) {
         if(ship.dead) { // Stop inputs if player is out of lives
@@ -108,7 +113,18 @@
     function newGame() {
         level = 0;
         lives = GAME_LIVES;
+        score = 0;
         ship = newShip();
+        
+        // Get the highscore from local storage
+        var scoreString = localStorage.getItem(SAVE_KEY_SCORE);
+        if (scoreString == null) {
+            highscore = 0;
+        }
+        else {
+            highscore = parseInt(scoreString);
+        }
+
         newLevel();
     }
 
@@ -160,10 +176,21 @@
         if (radius == Math.ceil(ASTEROIDS_SIZE / 2)) {
             asteroids.push(newAsteroid(x, y, Math.ceil(ASTEROIDS_SIZE / 4)));
             asteroids.push(newAsteroid(x, y, Math.ceil(ASTEROIDS_SIZE / 4)));
+            score += ASTEROID_POINTS_LARGE;
         }
         else if (radius == Math.ceil(ASTEROIDS_SIZE / 4)) {
             asteroids.push(newAsteroid(x, y, Math.ceil(ASTEROIDS_SIZE / 8)));
             asteroids.push(newAsteroid(x, y, Math.ceil(ASTEROIDS_SIZE / 8)));
+            score += ASTEROID_POINTS_MEDIUM;
+        }
+        else {
+            score += ASTEROID_POINTS_SMALL;
+        }
+
+        // Check highscore
+        if (score > highscore) {
+            highscore = score;
+            localStorage.setItem(SAVE_KEY_SCORE, highscore);
         }
 
         // Destroy Asteroid
@@ -366,8 +393,10 @@
             }
         }
 
+
         // Draw the game text
         if (textAlpha >= 0) {
+            // Level Text
             context.textAlign = "center";
             context.textBaseline = "middle";
             context.fillStyle = "rgba(255, 255, 255, " + textAlpha + ")";
@@ -385,6 +414,20 @@
             lifeColor = exploding && i == lives - 1 ? "red" : "white";
             drawShip(SHIP_SIZE + i * SHIP_SIZE * 1.2, SHIP_SIZE, 0.5 * Math.PI, lifeColor);
         } 
+
+        // Draw the current Score
+        context.textAlign = "right";
+        context.textBaseline = "middle";
+        context.fillStyle = "white";
+        context.font = TEXT_SIZE + "px dejavu sans mono";
+        context.fillText(score, canvas.width - SHIP_SIZE / 2, SHIP_SIZE);
+        
+        // Draw the HighScore
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillStyle = "white";
+        context.font = (TEXT_SIZE * 0.75) + "px dejavu sans mono";
+        context.fillText("Top: " + highscore, canvas.width / 2, SHIP_SIZE);
 
         // Detect laser hits on Asteroids
         var asteriodX, asteriodY, asteriodRadius, laserX, laserY;
