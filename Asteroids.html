@@ -10,27 +10,37 @@
 <body>
     <canvas id="gameCanvas" width="1000" height="800"></canvas>
     <script>
+    
+    /************* CONSTANTS *************/
+    // Game Constants
     const FPS = 30; // Frames per second
+    const GAME_LIVES = 3; // Starting number of lives
+    const SHOW_BOUNDING = false; // Show or hide collision bounding
+    const TEXT_FADE_TIME = 2.5; // Text fade time in seconds
+    const TEXT_SIZE = 40; // Text font height in pixels
+
+    // Ship Constants
     const FRICTION = 0.7; // Friction coefficient of space (0 = no friction, 1 = lots of friction)
     const SHIP_SIZE = 30; // Ship height in pixel
-    const GAME_LIVES = 3; // Starting number of lives
-    const LASER_MAX = 10; // Maximum of lasers on screen at once
-    const LASER_SPEED = 500; // Speed of lasers in pixels per second
-    const LASER_MAX_DISTANCE = 500; // Distance laser can move in pixels
-    const LASER_EXPLODE_DURATION = 0.1; // Duration of the lasers' explosion in seconds
     const TURN_SPEED = 360; // Turn speed Degree Per Second
     const SHIP_THRUST = 5; // Acceleration of the ship in pixel per second
     const SHIP_EXPLODE_DURATION = 0.3; // Duration of the ships explosion
     const SHIP_INVUNRABILITY_DURATION = 3; // Duration of ship invunrabilty when spawns in seconds.
     const SHIP_BLINK_DURATION = 0.1; // Duration of the ships blink during invunrability in seconds
+
+    // Laser Constants
+    const LASER_MAX = 10; // Maximum of lasers on screen at once
+    const LASER_SPEED = 500; // Speed of lasers in pixels per second
+    const LASER_MAX_DISTANCE = 500; // Distance laser can move in pixels
+    const LASER_EXPLODE_DURATION = 0.1; // Duration of the lasers' explosion in seconds
+
+    // Asteroid Constants
     const ASTEROIDS_NUM = 1; // Starting number of astriods
     const ASTEROIDS_SIZE = 100; // Starting size of asteroids in pixels
     const ASTEROIDS_SPEED = 50; // Max starting speed of asteroids in pixels
     const ASTEROIDS_VERTICES = 10; // Average number of vertices on each asteroid
     const ASTEROIDS_JAG = 0.4; // Jaggedness of the asteroids (0 = none, 1 = a lot)
-    const SHOW_BOUNDING = false; // Show or hide collision bounding
-    const TEXT_FADE_TIME = 2.5; // Text fade time in seconds
-    const TEXT_SIZE = 40; // Text font height in pixels
+
 
     /** @type {HTMLCanvasElement} */
     var canvas = document.getElementById("gameCanvas");
@@ -40,12 +50,73 @@
     var level, asteriods, ship, text, textAlpha, lives;
     newGame();
 
-    // Event Hanlders
+    // Event Hanlders for user inputs
     document.addEventListener("keydown", keyDown);
     document.addEventListener("keyup", keyUp);
 
     // Set up the game loop
     setInterval(update, 1000 / FPS);
+
+    
+    /************* FUNCTIONS *************/
+    function keyDown(/** @type {KeyboardEvent}*/ event) {
+        if(ship.dead) { // Stop inputs if player is out of lives
+            return;
+        }
+
+        switch(event.keyCode){
+            case 32: // space bar (Shoot laser)
+                shootLaser();
+                break;
+            case 37: // left arrow (rotate ship left)
+                ship.rotation = TURN_SPEED / 180 * Math.PI / FPS;
+                break;
+            case 38: // up arrow (move forward)
+                ship.thrusting = true;
+                break;
+            case 39: // right arrow (rotate ship right)
+                ship.rotation = -TURN_SPEED / 180 * Math.PI / FPS;
+                break;
+        }
+    }
+
+    function keyUp(/** @type {KeyboardEvent}*/ event) {
+        if(ship.dead) { // Stop inputs if player is out of lives
+            return;
+        }
+
+        switch(event.keyCode){
+            case 32: // space bar (allow shooting again)
+                ship.canShoot = true;
+                break;
+            case 37: // left arrow (stop rotating ship left)
+                ship.rotation = 0;
+                break;
+            case 38: // up arrow (stop moving forward)
+                ship.thrusting = false;
+                break;
+            case 39: // right arrow (stop rotating ship right)
+                ship.rotation = 0;
+                break;
+        }
+    }
+
+    function distanceBetweenPoints(x1, y1, x2, y2) {
+        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    }
+
+    function newGame() {
+        level = 0;
+        lives = GAME_LIVES;
+        ship = newShip();
+        newLevel();
+    }
+
+    function newLevel() {
+        text = "Level " + (level + 1);
+        textAlpha = 1.0;
+        createAsteroidBelt();
+    }
 
     function createAsteroidBelt() {
         asteroids = [];
@@ -57,6 +128,27 @@
             } while (distanceBetweenPoints(ship.x, ship.y, x, y) < ASTEROIDS_SIZE * 2 + ship.radius);
             asteroids.push(newAsteroid(x, y, Math.ceil(ASTEROIDS_SIZE / 2)));
             }
+    }
+
+    function newAsteroid(x, y, radius) {
+        var levelMultipler = 1 + 0.1 * level;
+        var asteroid = {
+            x: x,
+            y: y,
+            xVelocity: Math.random() * ASTEROIDS_SPEED * levelMultipler / FPS * (Math.random() < 0.5 ? 1 : -1),
+            yVelocity: Math.random() * ASTEROIDS_SPEED * levelMultipler / FPS * (Math.random() < 0.5 ? 1 : -1),
+            radius: radius,
+            angle: Math.random() * Math.PI * 2, // Radians
+            vertices: Math.floor(Math.random() * (ASTEROIDS_VERTICES + 1) + ASTEROIDS_VERTICES / 2),
+            offset: []
+        };
+
+        // Create the vertex offset array
+        for (var i = 0; i < asteroid.vertices; i++) {
+            asteroid.offset.push(Math.random() * ASTEROIDS_JAG * 2 + 1 - ASTEROIDS_JAG);
+        }
+
+        return asteroid;
     }
 
     function destroyAsteroid(index) {
@@ -84,8 +176,25 @@
         }
     }
 
-    function distanceBetweenPoints(x1, y1, x2, y2) {
-        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    function newShip() {
+        return {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: SHIP_SIZE / 2, 
+            angle: 90 / 180 * Math.PI, // convert to radians
+            blinkTime: Math.ceil(SHIP_BLINK_DURATION * FPS),
+            blinkNum: Math.ceil(SHIP_INVUNRABILITY_DURATION / SHIP_BLINK_DURATION),
+            canShoot: true,
+            dead: false,
+            explodeTime: 0,
+            lasers: [],
+            rotation: 0,
+            thrusting: false,
+            thrust: {
+                x: 0,
+                y: 0
+            }
+        }
     }
 
     function drawShip(x, y, angle, color = "white") { // If no Color is provided in function call then its defaulted to white
@@ -112,55 +221,6 @@
         ship.explodeTime = Math.ceil(SHIP_EXPLODE_DURATION * FPS);
     }
 
-    function gameOver() {
-        // TODO gameover
-        ship.dead = true;
-        text = "Game Over";
-        textAlpha = 1.0;
-    }
-
-    function keyDown(/** @type {KeyboardEvent}*/ event) {
-        if(ship.dead) {
-            return;
-        }
-
-        switch(event.keyCode){
-            case 32: // space bar (Shoot laser)
-                shootLaser();
-                break;
-            case 37: // left arrow (rotate ship left)
-                ship.rotation = TURN_SPEED / 180 * Math.PI / FPS;
-                break;
-            case 38: // up arrow (move forward)
-                ship.thrusting = true;
-                break;
-            case 39: // right arrow (rotate ship right)
-                ship.rotation = -TURN_SPEED / 180 * Math.PI / FPS;
-                break;
-        }
-    }
-
-    function keyUp(/** @type {KeyboardEvent}*/ event) {
-        if(ship.dead) {
-            return;
-        }
-
-        switch(event.keyCode){
-            case 32: // space bar (allow shooting again)
-                ship.canShoot = true;
-                break;
-            case 37: // left arrow (stop rotating ship left)
-                ship.rotation = 0;
-                break;
-            case 38: // up arrow (stop moving forward)
-                ship.thrusting = false;
-                break;
-            case 39: // right arrow (stop rotating ship right)
-                ship.rotation = 0;
-                break;
-        }
-    }
-
     function shootLaser() {
         // create laser object
         if (ship.canShoot && ship.lasers.length < LASER_MAX) {
@@ -178,59 +238,10 @@
         ship.canShoot = false;
     }
 
-    function newGame() {
-        level = 0;
-        lives = GAME_LIVES;
-        ship = newShip();
-        newLevel();
-    }
-
-    function newLevel() {
-        text = "Level " + (level + 1);
+    function gameOver() {
+        ship.dead = true;
+        text = "Game Over";
         textAlpha = 1.0;
-        createAsteroidBelt();
-    }
-
-    function newAsteroid(x, y, radius) {
-        var levelMultipler = 1 + 0.1 * level;
-        var asteroid = {
-            x: x,
-            y: y,
-            xVelocity: Math.random() * ASTEROIDS_SPEED * levelMultipler / FPS * (Math.random() < 0.5 ? 1 : -1),
-            yVelocity: Math.random() * ASTEROIDS_SPEED * levelMultipler / FPS * (Math.random() < 0.5 ? 1 : -1),
-            radius: radius,
-            angle: Math.random() * Math.PI * 2, // Radians
-            vertices: Math.floor(Math.random() * (ASTEROIDS_VERTICES + 1) + ASTEROIDS_VERTICES / 2),
-            offset: []
-        };
-
-        // Create the vertex offset array
-        for (var i = 0; i < asteroid.vertices; i++) {
-            asteroid.offset.push(Math.random() * ASTEROIDS_JAG * 2 + 1 - ASTEROIDS_JAG);
-        }
-
-        return asteroid;
-    }
-
-    function newShip() {
-        return {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            radius: SHIP_SIZE / 2, 
-            angle: 90 / 180 * Math.PI, // convert to radians
-            blinkTime: Math.ceil(SHIP_BLINK_DURATION * FPS),
-            blinkNum: Math.ceil(SHIP_INVUNRABILITY_DURATION / SHIP_BLINK_DURATION),
-            canShoot: true,
-            dead: false,
-            explodeTime: 0,
-            lasers: [],
-            rotation: 0,
-            thrusting: false,
-            thrust: {
-                x: 0,
-                y: 0
-            }
-        }
     }
 
     function update() {
@@ -242,7 +253,7 @@
         context.fillRect(0, 0, canvas.width, canvas.height);
 
         // Move the Ship forward
-        if(ship.thrusting && !ship.dead) {
+        if(ship.thrusting && !ship.dead) { // If player is dead stop ship movement
             ship.thrust.x += SHIP_THRUST * Math.cos(ship.angle) / FPS;
             ship.thrust.y -= SHIP_THRUST * Math.sin(ship.angle) / FPS;
 
@@ -443,7 +454,7 @@
 
         // Check for asteriod collisions
         if(!exploding) {
-            if(ship.blinkNum == 0 && !ship.dead) {
+            if(ship.blinkNum == 0 && !ship.dead) { // If player is dead stop checking for collisions
                 for (var i = 0; i < asteroids.length; i++) {
                     if(distanceBetweenPoints(ship.x, ship.y, asteroids[i].x, asteroids[i].y) < ship.radius + asteroids[i].radius) {
                         explodeShip();
@@ -557,6 +568,7 @@
         context.fillStyle = "red";
         //context.fillRect(ship.x - 1, ship.y - 1, 2, 2);
     }
+    
     </script>
 </body>
 
